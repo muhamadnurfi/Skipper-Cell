@@ -4,6 +4,7 @@ import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import AuthRouter from "./routes/auth.route.js";
+import productRouter from "./routes/product.route.js";
 
 dotenv.config(); // Load environment variables
 
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true })); // for parsing application/x-ww
 
 // --- ROUTES ---
 app.use("/api/auth", AuthRouter);
+app.use("/api/products", productRouter);
 
 // --- Error Handling Middleware ---
 app.use((err, req, res, next) => {

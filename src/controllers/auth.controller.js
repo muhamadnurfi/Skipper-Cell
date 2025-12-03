@@ -140,3 +140,9 @@ export const LoginUser = async (req, res) => {
     });
   }
 };
+
+export const GetUser = async (req, res) => {
+  res.status(200).json({
+    message: "User retrieved successfully",
+  });
+};
