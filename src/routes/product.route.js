@@ -1,7 +1,9 @@
 import express from "express";
 import {
   createProduct,
+  deleteProduct,
   getAllProduct,
+  updateProduct,
 } from "../controllers/product.controller.js";
 import {
   AuthenticateToken,
@@ -17,9 +19,23 @@ productRouter.get("/", getAllProduct);
 // Route terlindungi
 productRouter.post(
   "/",
-  AuthenticateToken, //verifikasi jwt
+  AuthenticateToken, //verifikasi jwt (wajib login)
   AuthorizeRole([Role.ADMIN]), // verifikasi role harus admin
   createProduct
+);
+
+productRouter.put(
+  "/:id",
+  AuthenticateToken,
+  AuthorizeRole([Role.ADMIN]),
+  updateProduct
+);
+
+productRouter.delete(
+  "/:id",
+  AuthenticateToken,
+  AuthorizeRole([Role.ADMIN]),
+  deleteProduct
 );
 
 export default productRouter;

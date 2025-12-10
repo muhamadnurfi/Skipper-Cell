@@ -24,6 +24,30 @@ model User {
   updatedAt   DateTime @updatedAt
 }
 
+model Category {
+  id          String @id @default(uuid())
+  name        String @unique
+  products    Product[]
+
+  createdAt   DateTime  @default(now())
+  updateAt    DateTime  @updatedAt
+}
+
+model Product {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String?
+  price       Float
+  stock       Int
+  imageUrl    String?
+
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updateAt    DateTime  @updatedAt
+}
+
 enum Role {
   USER
   ADMIN

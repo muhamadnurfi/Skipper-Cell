@@ -1,83 +1,18 @@
 import * as z from "zod";
 import prisma from "../lib/prisma.js";
-import { createProductSchema } from "../utils/validationSchema.js";
+import { createCategorySchema } from "../utils/validationSchema.js";
 
-// Get All Product
-export const getAllProduct = async (req, res) => {
+// GET ALL CATEGORY
+export const getAllCategory = async (req, res) => {
   try {
-    const { categoryId, search, minPrice, maxPrice } = req.query;
-
-    const products = await prisma.product.findMany({
-      where: {
-        categoryId: categoryId,
-        name: search ? { contains: search, mode: "insensitive" } : undefined,
-        price: {
-          gte: minPrice ? parseFloat(minPrice) : undefined,
-          lte: maxPrice ? parseFloat(maxPrice) : undefined,
-        },
-      },
-      include: {
-        category: {
-          select: { name: true },
-        },
-      },
-      orderBy: {
-        createdAt: "desc", // Urutkan dari yang terbaru
-      },
+    const categories = await prisma.category.findMany({
+      orderBy: { createdAt: "desc" },
     });
+
     res.status(200).json({
-      message: "List of all mobile phones and accessories.",
-      count: products.length,
-      data: products,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        message: "Invalid product data.",
-        errors: error.issues.map((issue) => ({
-          path: path.issue.join("."),
-          message: issue.message,
-        })),
-      });
-    }
-
-    console.log(error);
-    res.status(500).json({
-      message: "Internal server error during product creation.",
-    });
-  }
-};
-
-// CREATE PRODUCT
-export const createProduct = async (req, res) => {
-  try {
-    // validasi input
-    const validateData = createProductSchema.parse(req.body);
-
-    // cek kategori
-    const existCategory = await prisma.category.findUnique({
-      where: { id: validateData.categoryId },
-    });
-
-    if (!existCategory) {
-      return res.status(404).json({
-        message: "Category not found. Product creation failed.",
-      });
-    }
-
-    // simpan produk ke dalam database
-    const newProduct = await prisma.product.create({
-      data: validateData,
-      include: {
-        category: {
-          select: { name: true },
-        },
-      },
-    });
-
-    res.status(201).json({
-      message: "Product created successfully by Admin",
-      data: newProduct,
+      message: "List of all categories.",
+      count: categories.length,
+      data: categories,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -98,31 +33,28 @@ export const createProduct = async (req, res) => {
   }
 };
 
-// Update Product
-export const updateProduct = async (req, res) => {
+// CREATE CATEGORY
+export const createCategory = async (req, res) => {
   try {
-    const { id } = req.params;
+    const validateData = createCategorySchema.parse(req.body);
 
-    const validateData = createProductSchema.parse(req.body);
-
-    const exist = await prisma.product.findUnique({
-      where: { id: String(id) },
+    const exist = await prisma.category.findFirst({
+      where: { name: validateData.name },
     });
 
-    if (!exist) {
-      return res.status(404).json({
-        message: "Product not found.",
+    if (exist) {
+      return res.status(400).json({
+        message: "Category already exist.",
       });
     }
 
-    const updatedProduct = await prisma.product.update({
-      where: { id: String(id) },
+    const newCategory = await prisma.category.create({
       data: validateData,
     });
 
     res.status(200).json({
-      message: "Product updated succesfully.",
-      data: updatedProduct,
+      message: "Category created successfully.",
+      data: newCategory,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -143,27 +75,72 @@ export const updateProduct = async (req, res) => {
   }
 };
 
-// Delete Product
-export const deleteProduct = async (req, res) => {
+// UPDATE CATEGORY
+export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const exist = await prisma.product.findUnique({
+    const validateData = createCategorySchema.parse(req.body);
+
+    const exist = await prisma.category.findUnique({
       where: { id: String(id) },
     });
 
     if (!exist) {
       return res.status(404).json({
-        message: "Product not found.",
+        message: "Category not found.",
       });
     }
 
-    await prisma.product.delete({
+    const updatedCategory = await prisma.category.update({
+      where: { id: String(id) },
+      data: validateData,
+    });
+
+    res.status(200).json({
+      message: "Category updated successfully.",
+      data: updatedCategory,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        message: "Invalid product data.",
+        errors: error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      });
+    }
+
+    // 5. Tangani Error Lainnya
+    console.error(error);
+    res.status(500).json({
+      message: "Internal server error during product creation.",
+    });
+  }
+};
+
+// DELETE CATEGORY
+export const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const exist = await prisma.category.findUnique({
+      where: { id: String(id) },
+    });
+
+    if (!exist) {
+      return res.status(404).json({
+        message: "Category not found.",
+      });
+    }
+
+    await prisma.category.delete({
       where: { id: String(id) },
     });
 
     res.status(200).json({
-      message: "Product deleted successfully.",
+      message: "Category deleted successfully.",
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

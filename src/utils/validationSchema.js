@@ -16,3 +16,19 @@ export const LoginSchema = z.object({
   email: z.email({ message: "Invalid format email" }),
   password: z.string().min(1, "Password is required"),
 });
+
+export const createCategorySchema = z.object({
+  name: z.string().min(2, "Category name must be at least 2 characters."),
+});
+
+export const createProductSchema = z.object({
+  name: z.string().min(3, "Product name must be at least 5 characters."),
+  description: z
+    .string()
+    .min(20, "Description must be at least 20 characters.")
+    .optional(),
+  price: z.number().positive("Price must be a positive number."),
+  stock: z.number().int().min(0, "Stock cannot be negative."),
+  imageUrl: z.url("Image URL must be a valid URL.").optional(),
+  categoryId: z.uuid("Category ID must be a valid UUID string."), // ID Kategori harus diisi
+});

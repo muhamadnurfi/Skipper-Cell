@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import * as z from "zod";
 import jwt from "jsonwebtoken";
-import { prisma } from "../lib/prisma.js";
+import prisma from "../lib/prisma.js";
 import { RegisterSchema, LoginSchema } from "../utils/validationSchema.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -55,7 +55,7 @@ export const RegisterUser = async (req, res) => {
       return res.status(400).json({
         message: "Invalid registration data.",
         errors: error.issues.map((issue) => ({
-          path: issue.path.join("."),
+          path: path.issue.join("."),
           message: issue.message,
         })),
       });
