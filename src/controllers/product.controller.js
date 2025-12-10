@@ -1,6 +1,10 @@
 import * as z from "zod";
 import prisma from "../lib/prisma.js";
-import { createProductSchema } from "../utils/validationSchema.js";
+import {
+  createProductSchema,
+  updateProductSchema,
+} from "../utils/validationSchema.js";
+import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 
 // Get All Product
 export const getAllProduct = async (req, res) => {
@@ -35,7 +39,7 @@ export const getAllProduct = async (req, res) => {
       return res.status(400).json({
         message: "Invalid product data.",
         errors: error.issues.map((issue) => ({
-          path: path.issue.join("."),
+          path: issue.path.join("."),
           message: issue.message,
         })),
       });
@@ -54,6 +58,15 @@ export const createProduct = async (req, res) => {
     // validasi input
     const validateData = createProductSchema.parse(req.body);
 
+    // pastikan ada file
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Product image is required.",
+      });
+    }
+
+    const uploadResult = await uploadToCloudinary(req.file.buffer);
+
     // cek kategori
     const existCategory = await prisma.category.findUnique({
       where: { id: validateData.categoryId },
@@ -67,7 +80,12 @@ export const createProduct = async (req, res) => {
 
     // simpan produk ke dalam database
     const newProduct = await prisma.product.create({
-      data: validateData,
+      data: {
+        ...validateData,
+        price: Number(validateData.price),
+        stock: Number(validateData.stock),
+        imageUrl: uploadResult.secure_url,
+      },
       include: {
         category: {
           select: { name: true },
@@ -75,7 +93,7 @@ export const createProduct = async (req, res) => {
       },
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Product created successfully by Admin",
       data: newProduct,
     });
@@ -103,7 +121,7 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const validateData = createProductSchema.parse(req.body);
+    const validateData = updateProductSchema.parse(req.body);
 
     const exist = await prisma.product.findUnique({
       where: { id: String(id) },
@@ -115,12 +133,37 @@ export const updateProduct = async (req, res) => {
       });
     }
 
+    // cek kategori kalau user ingin update categoryId
+    if (validateData.categoryId) {
+      const existCategory = await prisma.category.findUnique({
+        where: { id: validateData.categoryId },
+      });
+
+      if (!existCategory) {
+        return res.status(404).json({
+          message: "Category not found.",
+        });
+      }
+    }
+
+    let imageUrl = exist.imageUrl;
+
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file.buffer);
+      imageUrl = uploadResult.secure_url;
+    }
+
     const updatedProduct = await prisma.product.update({
       where: { id: String(id) },
-      data: validateData,
+      data: {
+        ...validateData,
+        price: validateData.price ? Number(validateData.price) : undefined,
+        stock: validateData.stock ? Number(validateData.stock) : undefined,
+        imageUrl,
+      },
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Product updated succesfully.",
       data: updatedProduct,
     });
@@ -162,7 +205,7 @@ export const deleteProduct = async (req, res) => {
       where: { id: String(id) },
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Product deleted successfully.",
     });
   } catch (error) {

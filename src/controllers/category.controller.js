@@ -28,7 +28,7 @@ export const getAllCategory = async (req, res) => {
     // 5. Tangani Error Lainnya
     console.error(error);
     res.status(500).json({
-      message: "Internal server error during product creation.",
+      message: "Internal server error during category creation.",
     });
   }
 };
@@ -70,7 +70,7 @@ export const createCategory = async (req, res) => {
     // 5. Tangani Error Lainnya
     console.error(error);
     res.status(500).json({
-      message: "Internal server error during product creation.",
+      message: "Internal server error during category creation.",
     });
   }
 };
@@ -115,7 +115,7 @@ export const updateCategory = async (req, res) => {
     // 5. Tangani Error Lainnya
     console.error(error);
     res.status(500).json({
-      message: "Internal server error during product creation.",
+      message: "Internal server error during category creation.",
     });
   }
 };
@@ -156,7 +156,7 @@ export const deleteCategory = async (req, res) => {
     // 5. Tangani Error Lainnya
     console.error(error);
     res.status(500).json({
-      message: "Internal server error during product creation.",
+      message: "Internal server error during category creation.",
     });
   }
 };

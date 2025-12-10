@@ -10,6 +10,7 @@ import {
   AuthorizeRole,
 } from "../middleware/auth.middleware.js";
 import { Role } from "../generated/prisma/index.js";
+import upload from "../middleware/upload.middleware.js";
 
 const productRouter = express.Router();
 
@@ -21,6 +22,7 @@ productRouter.post(
   "/",
   AuthenticateToken, //verifikasi jwt (wajib login)
   AuthorizeRole([Role.ADMIN]), // verifikasi role harus admin
+  upload.single("image"),
   createProduct
 );
 
@@ -28,6 +30,7 @@ productRouter.put(
   "/:id",
   AuthenticateToken,
   AuthorizeRole([Role.ADMIN]),
+  upload.single("image"),
   updateProduct
 );
 

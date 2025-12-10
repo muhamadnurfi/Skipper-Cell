@@ -27,8 +27,10 @@ export const createProductSchema = z.object({
     .string()
     .min(20, "Description must be at least 20 characters.")
     .optional(),
-  price: z.number().positive("Price must be a positive number."),
-  stock: z.number().int().min(0, "Stock cannot be negative."),
+  price: z.coerce.number().positive("Price must be a positive number."),
+  stock: z.coerce.number().int().min(0, "Stock cannot be negative."),
   imageUrl: z.url("Image URL must be a valid URL.").optional(),
   categoryId: z.uuid("Category ID must be a valid UUID string."), // ID Kategori harus diisi
 });
+
+export const updateProductSchema = createProductSchema.partial();
