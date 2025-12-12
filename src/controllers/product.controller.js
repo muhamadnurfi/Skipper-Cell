@@ -9,29 +9,86 @@ import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 // Get All Product
 export const getAllProduct = async (req, res) => {
   try {
-    const { categoryId, search, minPrice, maxPrice } = req.query;
+    const {
+      categoryId,
+      search,
+      minPrice,
+      maxPrice,
+      sort = "newest",
+      page = 1,
+      limit = 10,
+    } = req.query;
 
-    const products = await prisma.product.findMany({
-      where: {
-        categoryId: categoryId,
-        name: search ? { contains: search, mode: "insensitive" } : undefined,
-        price: {
-          gte: minPrice ? parseFloat(minPrice) : undefined,
-          lte: maxPrice ? parseFloat(maxPrice) : undefined,
+    // Pagination
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build dynamic filter
+    const filters = {
+      AND: [],
+    };
+
+    // Filter category ID
+    if (categoryId) {
+      filters.AND.push({
+        categoryId,
+      });
+    }
+
+    // Cari product berdasarakan nama
+    if (search) {
+      filters.AND.push({
+        name: {
+          contains: search,
+          mode: "insensitive",
         },
-      },
+      });
+    }
+
+    if (minPrice || maxPrice) {
+      filters.AND.push({
+        price: {
+          gte: minPrice ? Number(minPrice) : undefined,
+          lte: maxPrice ? Number(maxPrice) : undefined,
+        },
+      });
+    }
+
+    // Sorting
+    let orderBy = { createdAt: "desc" };
+
+    if (sort === "price_asc") orderBy = { price: "asc" };
+    if (sort === "price_desc") orderBy = { price: "desc" };
+
+    // Hitung total data sebelum pagination
+    const totalItems = await prisma.product.count({
+      where: filters,
+    });
+
+    // Ambil data pagination
+    const products = await prisma.product.findMany({
+      where: filters,
+      orderBy,
+      skip,
+      take: limitNum,
       include: {
         category: {
-          select: { name: true },
+          select: {
+            name: true,
+          },
         },
       },
-      orderBy: {
-        createdAt: "desc", // Urutkan dari yang terbaru
-      },
     });
-    res.status(200).json({
-      message: "List of all mobile phones and accessories.",
-      count: products.length,
+
+    return res.status(200).json({
+      message: "List of mobile phones and accessories.",
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limitNum),
+      },
       data: products,
     });
   } catch (error) {
