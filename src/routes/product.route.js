@@ -3,6 +3,7 @@ import {
   createProduct,
   deleteProduct,
   getAllProduct,
+  getProductById,
   updateProduct,
 } from "../controllers/product.controller.js";
 import {
@@ -16,6 +17,7 @@ const productRouter = express.Router();
 
 // Route publik
 productRouter.get("/", getAllProduct);
+productRouter.get("/:id", getProductById);
 
 // Route terlindungi
 productRouter.post(
