@@ -15,19 +15,25 @@ datasource db {
 
 model User {
   id          String   @id @default(uuid())
+
   fullName    String
   email       String   @unique
   password    String
   phoneNumber String
+
   role        Role   @default(USER)
+  order       Order[] // Relasi tabel Order
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model Category {
   id          String @id @default(uuid())
+
   name        String @unique
-  products    Product[]
+
+  products    Product[] // Relasi tabel Product
 
   createdAt   DateTime  @default(now())
   updateAt    DateTime  @updatedAt
@@ -35,14 +41,46 @@ model Category {
 
 model Product {
   id          String @id @default(uuid())
+  categoryId  String
+
   name        String @unique
   description String?
   price       Float
   stock       Int
   imageUrl    String?
 
-  categoryId  String
+  orderItems   OrderItem[] // relasi tabel OrderItem
   category    Category  @relation(fields: [categoryId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updateAt    DateTime  @updatedAt
+}
+
+model Order {
+  id          String @id @default(uuid())
+  userId      String
+  user        User  @relation(fields: [userId], references: [id])
+
+
+  totalPrice  Float
+  status      OrderStatus @default(PENDING)
+
+  items       OrderItem[]
+
+  createdAt   DateTime  @default(now())
+  updateAt    DateTime  @updatedAt
+}
+
+model OrderItem {
+  id          String @id @default(uuid())
+  orderId     String
+  productid   String
+
+  quantity    Int
+  price       Float
+
+  order       Order @relation(fields: [orderId], references: [id])
+  product     Product @relation(fields: [productid], references: [id])
 
   createdAt   DateTime  @default(now())
   updateAt    DateTime  @updatedAt
@@ -51,4 +89,10 @@ model Product {
 enum Role {
   USER
   ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
 }
