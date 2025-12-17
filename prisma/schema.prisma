@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
@@ -15,75 +9,59 @@ datasource db {
 
 model User {
   id          String   @id @default(uuid())
-
-  fullName    String
   email       String   @unique
   password    String
   phoneNumber String
-
-  role        Role   @default(USER)
-  order       Order[] // Relasi tabel Order
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  fullName    String
+  role        Role     @default(USER)
+  order       Order[]
 }
 
 model Category {
-  id          String @id @default(uuid())
-
-  name        String @unique
-
-  products    Product[] // Relasi tabel Product
-
-  createdAt   DateTime  @default(now())
-  updateAt    DateTime  @updatedAt
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updateAt  DateTime  @updatedAt
+  products  Product[]
 }
 
 model Product {
-  id          String @id @default(uuid())
-  categoryId  String
-
-  name        String @unique
+  id          String      @id @default(uuid())
+  name        String      @unique
   description String?
   price       Float
   stock       Int
   imageUrl    String?
-
-  orderItems   OrderItem[] // relasi tabel OrderItem
-  category    Category  @relation(fields: [categoryId], references: [id])
-
-  createdAt   DateTime  @default(now())
-  updateAt    DateTime  @updatedAt
+  categoryId  String
+  createdAt   DateTime    @default(now())
+  updateAt    DateTime    @updatedAt
+  orderItems  OrderItem[]
+  category    Category    @relation(fields: [categoryId], references: [id])
 }
 
 model Order {
-  id          String @id @default(uuid())
-  userId      String
-  user        User  @relation(fields: [userId], references: [id])
-
-
-  totalPrice  Float
-  status      OrderStatus @default(PENDING)
-
-  items       OrderItem[]
-
-  createdAt   DateTime  @default(now())
-  updateAt    DateTime  @updatedAt
+  id         String      @id @default(uuid())
+  userId     String
+  totalPrice Float
+  status     OrderStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updateAt   DateTime    @updatedAt
+  user       User        @relation(fields: [userId], references: [id])
+  items      OrderItem[]
 }
 
 model OrderItem {
-  id          String @id @default(uuid())
-  orderId     String
-  productid   String
-
-  quantity    Int
-  price       Float
-
-  order       Order @relation(fields: [orderId], references: [id])
-  product     Product @relation(fields: [productid], references: [id])
-
-  createdAt   DateTime  @default(now())
-  updateAt    DateTime  @updatedAt
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], map: "OrderItem_productid_fkey")
 }
 
 enum Role {
