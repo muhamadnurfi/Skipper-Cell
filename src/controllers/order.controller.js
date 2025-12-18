@@ -1,6 +1,15 @@
 import * as z from "zod";
 import prisma from "../lib/prisma.js";
 
+const allowedTransitions = {
+  PENDING: ["PAID", "CANCELLED"],
+  PAID: ["PROCESSING"],
+  PROCESSING: ["SHIPPED"],
+  SHIPPED: ["COMPLETED"],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+
 export const createOrder = async (req, res) => {
   const userId = req.user.id;
   const { items } = req.body;
@@ -131,6 +140,52 @@ export const createOrder = async (req, res) => {
     console.log(error);
     res.status(500).json({
       message: "Internal server error during order creation.",
+    });
+  }
+};
+
+export const updateOrderStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status: newStatus } = req.body;
+
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    const currentStatus = order.status;
+
+    if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
+      return res.status(400).json({
+        message: `Order already ${currentStatus}, status cannot be changed.`,
+      });
+    }
+
+    if (!allowedTransitions[currentStatus].includes(newStatus)) {
+      return res.status(400).json({
+        message: `Invalid status transition from ${currentStatus} to ${newStatus}.`,
+      });
+    }
+
+    const updated = await prisma.order.update({
+      where: { id },
+      data: { status: newStatus },
+    });
+
+    res.status(200).json({
+      message: "Order status updated.",
+      data: updated,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Failed to update order status.",
     });
   }
 };

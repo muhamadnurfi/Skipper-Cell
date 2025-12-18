@@ -72,5 +72,8 @@ enum Role {
 enum OrderStatus {
   PENDING
   PAID
+  PROCESSING
+  SHIPPED
   CANCELLED
+  COMPLETED
 }
