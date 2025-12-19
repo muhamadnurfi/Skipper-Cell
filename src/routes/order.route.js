@@ -8,10 +8,21 @@ import {
   updateOrderStatus,
 } from "../controllers/order.controller.js";
 import { Role } from "../generated/prisma/index.js";
+import {
+  getAllOrders,
+  getMyOrders,
+} from "../controllers/orderHistory.controller.js";
 
 const orderRouter = express.Router();
 
 // Admin
+orderRouter.get(
+  "/",
+  AuthenticateToken,
+  AuthorizeRole([Role.ADMIN]),
+  getAllOrders
+);
+
 orderRouter.patch(
   "/:id/status",
   AuthenticateToken,
@@ -21,5 +32,6 @@ orderRouter.patch(
 
 // User
 orderRouter.post("/", AuthenticateToken, createOrder);
+orderRouter.get("/me", AuthenticateToken, getMyOrders);
 
 export default orderRouter;

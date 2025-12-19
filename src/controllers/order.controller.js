@@ -49,6 +49,10 @@ export const createOrder = async (req, res) => {
           throw new Error(`Product not found: ${item.productId}`);
         }
 
+        if (product.stock < item.quantity) {
+          throw new Error(`Stock not enough for product ${product.name}`);
+        }
+
         const itemTotal = product.price * item.quantity;
         totalPrice += itemTotal;
 
@@ -89,30 +93,6 @@ export const createOrder = async (req, res) => {
         },
       });
 
-      // Update stock
-      for (const item of orderItemsData) {
-        if (!item.productId) {
-          throw new Error("ProductId is required");
-        }
-        const updated = await tx.product.updateMany({
-          where: {
-            id: item.productId,
-            stock: {
-              gte: item.quantity,
-            },
-          },
-          data: {
-            stock: {
-              decrement: item.quantity,
-            },
-          },
-        });
-
-        if (updated.count === 0) {
-          throw new Error("Insufficient stock for product.");
-        }
-      }
-
       return order;
     });
 
@@ -149,38 +129,66 @@ export const updateOrderStatus = async (req, res) => {
   const { status: newStatus } = req.body;
 
   try {
-    const order = await prisma.order.findUnique({
-      where: { id },
-    });
-
-    if (!order) {
-      return res.status(404).json({
-        message: "Order not found.",
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: {
+          items: true,
+        },
       });
-    }
 
-    const currentStatus = order.status;
+      if (!order) {
+        throw new Error(`Order not found.`);
+      }
 
-    if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
-      return res.status(400).json({
-        message: `Order already ${currentStatus}, status cannot be changed.`,
+      const currentStatus = order.status;
+
+      if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
+        return res.status(400).json({
+          message: `Order already ${currentStatus}, status cannot be changed.`,
+        });
+      }
+
+      if (!allowedTransitions[currentStatus].includes(newStatus)) {
+        return res.status(400).json({
+          message: `Invalid status transition from ${currentStatus} to ${newStatus}.`,
+        });
+      }
+
+      // PENDING -> PAID (kurangi stock)
+      if (currentStatus === "PENDING" && newStatus === "PAID") {
+        for (const item of order.items) {
+          const updated = await tx.product.updateMany({
+            where: {
+              id: item.productId,
+              stock: {
+                gte: item.quantity,
+              },
+            },
+            data: {
+              stock: {
+                decrement: item.quantity,
+              },
+            },
+          });
+
+          if (updated.count === 0) {
+            throw new Error("Insufficient stock");
+          }
+        }
+      }
+
+      return await tx.order.update({
+        where: { id },
+        data: {
+          status: newStatus,
+        },
       });
-    }
-
-    if (!allowedTransitions[currentStatus].includes(newStatus)) {
-      return res.status(400).json({
-        message: `Invalid status transition from ${currentStatus} to ${newStatus}.`,
-      });
-    }
-
-    const updated = await prisma.order.update({
-      where: { id },
-      data: { status: newStatus },
     });
 
     res.status(200).json({
       message: "Order status updated.",
-      data: updated,
+      data: result,
     });
   } catch (error) {
     console.error(error);
