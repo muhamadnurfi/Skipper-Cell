@@ -12,6 +12,7 @@ import {
   getAllOrders,
   getMyOrders,
 } from "../controllers/orderHistory.controller.js";
+import { payOrder } from "../controllers/payOrder.controller.js";
 
 const orderRouter = express.Router();
 
@@ -33,5 +34,6 @@ orderRouter.patch(
 // User
 orderRouter.post("/", AuthenticateToken, createOrder);
 orderRouter.get("/me", AuthenticateToken, getMyOrders);
+orderRouter.post("/:id/pay", AuthenticateToken, payOrder);
 
 export default orderRouter;
