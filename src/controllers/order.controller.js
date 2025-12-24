@@ -93,6 +93,13 @@ export const createOrder = async (req, res) => {
         },
       });
 
+      await tx.payment.create({
+        data: {
+          orderId: order.id,
+          amount: totalPrice,
+        },
+      });
+
       return order;
     });
 
