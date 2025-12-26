@@ -252,3 +252,66 @@ export const verifyPayment = async (req, res) => {
     });
   }
 };
+
+export const rejectPayment = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({
+        where: { id },
+        include: {
+          order: true,
+        },
+      });
+
+      if (!payment) {
+        throw new Error(`AYMENT_NOT_FOUND`);
+      }
+
+      if (payment.status !== "PENDING") {
+        throw new Error(`PAYMENT_ALREADY_PROCESSED`);
+      }
+
+      // update paymen -> reject
+      await tx.payment.update({
+        where: { id },
+        data: {
+          status: "REJECTED",
+        },
+      });
+
+      // update order -> cancelled
+      await tx.order.update({
+        where: {
+          id: payment.orderId,
+        },
+        data: {
+          status: "CANCELLED",
+        },
+      });
+
+      return payment;
+    });
+    return res.status(200).json({
+      message: "Payment rejected successfully.",
+      data: result,
+    });
+  } catch (error) {
+    console.error(error);
+
+    if (error.message === "PAYMENT_NOT_FOUND") {
+      return res.status(404).json({ message: "Payment not found." });
+    }
+
+    if (error.message === "PAYMENT_ALREADY_PROCESSED") {
+      return res.status(400).json({
+        message: "Payment already verified or rejected.",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Failed to reject payment.",
+    });
+  }
+};

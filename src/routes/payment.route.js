@@ -5,6 +5,7 @@ import {
 } from "../middleware/auth.middleware.js";
 import { Role } from "../generated/prisma/index.js";
 import {
+  rejectPayment,
   uploadPaymentProof,
   verifyPayment,
 } from "../controllers/payOrder.controller.js";
@@ -19,6 +20,12 @@ paymentRouter.patch(
   AuthenticateToken,
   AuthorizeRole([Role.ADMIN]),
   verifyPayment
+);
+paymentRouter.patch(
+  "/:id/reject",
+  AuthenticateToken,
+  AuthorizeRole([Role.ADMIN]),
+  rejectPayment
 );
 
 // user
