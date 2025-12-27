@@ -160,7 +160,7 @@ export const updateOrderStatus = async (req, res) => {
 
       const currentStatus = order.status;
 
-      if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
+      if (["COMPLETED", "CANCELLED"].includes(currentStatus)) {
         throw new Error(
           `Order already ${currentStatus}, status cannot be changed.`
         );
