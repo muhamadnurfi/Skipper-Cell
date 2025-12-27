@@ -96,8 +96,17 @@ export const createOrder = async (req, res) => {
       // ketika di order maka payment dibuat
       await tx.payment.create({
         data: {
-          orderId: order.id,
+          user: {
+            connect: {
+              id: userId,
+            },
+          },
           amount: totalPrice,
+          order: {
+            connect: {
+              id: order.id,
+            },
+          },
         },
       });
 

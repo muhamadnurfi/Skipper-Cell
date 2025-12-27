@@ -1,74 +1,49 @@
 import prisma from "../lib/prisma.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 
-// export const payOrder = async (req, res) => {
-//   const { id } = req.params;
+export const getAllPayments = async (req, res) => {
+  const { status } = req.params;
 
-//   try {
-//     const result = await prisma.$transaction(async (tx) => {
-//       const order = await tx.order.findUnique({
-//         where: { id },
-//         include: {
-//           items: true,
-//         },
-//       });
+  try {
+    const payments = await prisma.payment.findMany({
+      where: status
+        ? {
+            status,
+          }
+        : undefined,
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+          },
+        },
+        order: {
+          select: {
+            id: true,
+            status: true,
+            totalPrice: true,
+          },
+        },
+      },
+    });
 
-//       if (!order) {
-//         throw new Error(`Order not found.`);
-//       }
-
-//       const currentStatus = order.status;
-
-//       if (currentStatus !== "PENDING") {
-//         throw new Error("Only PENDING orders can be paid.");
-//       }
-
-//       // cek & kurangi stok
-//       for (const item of order.items) {
-//         const updated = await tx.product.update({
-//           where: {
-//             id: item.productId,
-//             stock: {
-//               gte: item.quantity,
-//             },
-//           },
-//           data: {
-//             stock: {
-//               decrement: item.quantity,
-//             },
-//           },
-//         });
-
-//         if (updated.count === 0) {
-//           throw new Error("Insufficient stock during payment");
-//         }
-//       }
-
-//       // ubah status menjadi PAID
-//       const paidOrder = await tx.order.update({
-//         where: { id },
-//         data: {
-//           status: {
-//             set: "PAID",
-//           },
-//         },
-//       });
-
-//       return paidOrder;
-//     });
-
-//     res.status(200).json({
-//       message: "Payment successfull.",
-//       data: result,
-//     });
-//   } catch (error) {
-//     console.error(error.message);
-
-//     res.status(400).json({
-//       message: error.message || "Payment failed",
-//     });
-//   }
-// };
+    return res.status(200).json({
+      message: "List of payments.",
+      count: payments.length,
+      data: payments,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Failed to fetch payments",
+    });
+  }
+};
 
 export const uploadPaymentProof = async (req, res) => {
   const { id } = req.params;
@@ -261,19 +236,27 @@ export const rejectPayment = async (req, res) => {
       const payment = await tx.payment.findUnique({
         where: { id },
         include: {
-          order: true,
+          order: {
+            include: {
+              items: true,
+            },
+          },
         },
       });
 
       if (!payment) {
-        throw new Error(`AYMENT_NOT_FOUND`);
+        throw new Error("PAYMENT_NOT_FOUND");
       }
 
       if (payment.status !== "PENDING") {
-        throw new Error(`PAYMENT_ALREADY_PROCESSED`);
+        throw new Error("PAYMENT_ALREADY_PROCESSED");
       }
 
-      // update paymen -> reject
+      if (payment.order.status === "COMPLETED") {
+        throw new Error("ORDER_ALREADY_COMPLETED");
+      }
+
+      // update payment -> reject
       await tx.payment.update({
         where: { id },
         data: {
@@ -310,6 +293,11 @@ export const rejectPayment = async (req, res) => {
       });
     }
 
+    if (error.message === "ORDER_ALREADY_COMPLETED") {
+      return res.status(400).json({
+        message: "Completed order cannot be rejected.",
+      });
+    }
     return res.status(500).json({
       message: "Failed to reject payment.",
     });

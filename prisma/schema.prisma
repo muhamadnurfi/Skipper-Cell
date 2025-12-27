@@ -17,6 +17,7 @@ model User {
   fullName    String
   role        Role     @default(USER)
   order       Order[]
+  payments     Payment[]
 }
 
 model Category {
@@ -68,6 +69,7 @@ model OrderItem {
 model Payment {
   id        String   @id @default(uuid())
   orderId   String   @unique
+  userId    String
   amount    Float
   proofUrl  String?
   paidAt    DateTime?
@@ -75,6 +77,7 @@ model Payment {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 enum Role {

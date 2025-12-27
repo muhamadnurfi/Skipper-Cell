@@ -5,6 +5,7 @@ import {
 } from "../middleware/auth.middleware.js";
 import { Role } from "../generated/prisma/index.js";
 import {
+  getAllPayments,
   rejectPayment,
   uploadPaymentProof,
   verifyPayment,
@@ -14,7 +15,12 @@ import upload from "../middleware/upload.middleware.js";
 const paymentRouter = express.Router();
 
 // admin
-paymentRouter.get("/", AuthenticateToken, AuthorizeRole([Role.ADMIN]));
+paymentRouter.get(
+  "/",
+  AuthenticateToken,
+  AuthorizeRole([Role.ADMIN]),
+  getAllPayments
+);
 paymentRouter.patch(
   "/:id/verify",
   AuthenticateToken,
