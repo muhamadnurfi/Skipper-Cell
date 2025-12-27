@@ -161,15 +161,15 @@ export const updateOrderStatus = async (req, res) => {
       const currentStatus = order.status;
 
       if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
-        return res.status(400).json({
-          message: `Order already ${currentStatus}, status cannot be changed.`,
-        });
+        throw new Error(
+          `Order already ${currentStatus}, status cannot be changed.`
+        );
       }
 
       if (!allowedTransitions[currentStatus].includes(newStatus)) {
-        return res.status(400).json({
-          message: `Invalid status transition from ${currentStatus} to ${newStatus}.`,
-        });
+        throw new Error(
+          `Invalid status transition from ${currentStatus} to ${newStatus}.`
+        );
       }
 
       // PENDING -> PAID (kurangi stock)

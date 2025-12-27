@@ -72,6 +72,7 @@ model Payment {
   userId    String
   amount    Float
   proofUrl  String?
+  reason    String?
   paidAt    DateTime?
   status    PaymentStatus @default(PENDING)
   createdAt DateTime @default(now())

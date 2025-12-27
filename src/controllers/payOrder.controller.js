@@ -2,7 +2,7 @@ import prisma from "../lib/prisma.js";
 import { uploadToCloudinary } from "../utils/uploadToCloudinary.js";
 
 export const getAllPayments = async (req, res) => {
-  const { status } = req.params;
+  const { status } = req.query;
 
   try {
     const payments = await prisma.payment.findMany({
@@ -230,6 +230,13 @@ export const verifyPayment = async (req, res) => {
 
 export const rejectPayment = async (req, res) => {
   const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!reason) {
+    return res.status(400).json({
+      message: "Reject reason is required.",
+    });
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -257,10 +264,11 @@ export const rejectPayment = async (req, res) => {
       }
 
       // update payment -> reject
-      await tx.payment.update({
+      const updatedPayment = await tx.payment.update({
         where: { id },
         data: {
           status: "REJECTED",
+          reason,
         },
       });
 
@@ -274,7 +282,7 @@ export const rejectPayment = async (req, res) => {
         },
       });
 
-      return payment;
+      return updatedPayment;
     });
     return res.status(200).json({
       message: "Payment rejected successfully.",
