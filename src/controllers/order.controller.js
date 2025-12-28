@@ -214,3 +214,65 @@ export const updateOrderStatus = async (req, res) => {
     });
   }
 };
+
+export const getOrderDetail = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  const role = req.user.role;
+
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              },
+            },
+          },
+        },
+        payment: {
+          select: {
+            status: true,
+            amount: true,
+            proofUrl: true,
+            reason: true,
+            paidAt: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found.",
+      });
+    }
+
+    if (role === "USER" && order.userId !== userId) {
+      return res.status(403).json({
+        message: "Access denied.",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Order detail.",
+      data: order,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Failed to fetch order detail.",
+    });
+  }
+};

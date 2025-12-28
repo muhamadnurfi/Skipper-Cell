@@ -5,6 +5,7 @@ import {
 } from "../middleware/auth.middleware.js";
 import {
   createOrder,
+  getOrderDetail,
   updateOrderStatus,
 } from "../controllers/order.controller.js";
 import { Role } from "../generated/prisma/index.js";
@@ -33,6 +34,6 @@ orderRouter.patch(
 // User
 orderRouter.post("/", AuthenticateToken, createOrder);
 orderRouter.get("/me", AuthenticateToken, getMyOrders);
-// orderRouter.post("/:id/pay", AuthenticateToken, payOrder);
+orderRouter.get("/:id", AuthenticateToken, getOrderDetail);
 
 export default orderRouter;
