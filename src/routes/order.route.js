@@ -6,6 +6,7 @@ import {
 import {
   createOrder,
   getOrderDetail,
+  getOrderTimeline,
   updateOrderStatus,
 } from "../controllers/order.controller.js";
 import { Role } from "../generated/prisma/index.js";
@@ -35,5 +36,6 @@ orderRouter.patch(
 orderRouter.post("/", AuthenticateToken, createOrder);
 orderRouter.get("/me", AuthenticateToken, getMyOrders);
 orderRouter.get("/:id", AuthenticateToken, getOrderDetail);
+orderRouter.get("/:id/timeline", AuthenticateToken, getOrderTimeline);
 
 export default orderRouter;

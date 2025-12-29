@@ -45,12 +45,10 @@ export const createOrder = async (req, res) => {
       const orderItemsData = items.map((item) => {
         const product = productMap[item.productId];
 
-        if (!product) {
-          throw new Error(`Product not found: ${item.productId}`);
-        }
+        if (!product) throw new Error("PRODUCT_NOT_FOUND");
 
         if (product.stock < item.quantity) {
-          throw new Error(`Stock not enough for product ${product.name}`);
+          throw new Error("INSUFFICIENT_STOCK");
         }
 
         const itemTotal = product.price * item.quantity;
@@ -82,6 +80,14 @@ export const createOrder = async (req, res) => {
               quantity: item.quantity,
               price: item.price,
             })),
+          },
+          statusHistories: {
+            create: {
+              fromStatus: null,
+              toStatus: "PENDING",
+              changedBy: "USER",
+              note: "Order created",
+            },
           },
         },
         include: {
@@ -118,23 +124,16 @@ export const createOrder = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        message: "Invalid order data.",
-        errors: error.issues.map((issue) => ({
-          path: issue.path.join("."),
-          message: issue.errors,
-        })),
-      });
+    console.log(error.message);
+
+    if (error.message === "INSUFFICIENT_STOCK") {
+      return res.status(400).json({ message: "Insufficient stock." });
     }
 
-    if (error.message.includes("Insufficient stock")) {
-      return res.status(400).json({
-        message: error.message,
-      });
+    if (error.message === "PRODUCT_NOT_FOUND") {
+      return res.status(404).json({ message: "Product not found." });
     }
 
-    console.log(error);
     res.status(500).json({
       message: "Internal server error during order creation.",
     });
@@ -143,7 +142,7 @@ export const createOrder = async (req, res) => {
 
 export const updateOrderStatus = async (req, res) => {
   const { id } = req.params;
-  const { status: newStatus } = req.body;
+  const { status: newStatus, note } = req.body;
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -151,6 +150,7 @@ export const updateOrderStatus = async (req, res) => {
         where: { id },
         include: {
           items: true,
+          payment: true,
         },
       });
 
@@ -170,6 +170,13 @@ export const updateOrderStatus = async (req, res) => {
         throw new Error(
           `Invalid status transition from ${currentStatus} to ${newStatus}.`
         );
+      }
+
+      // PAYMENT VALIDASI
+      if (["PAID", "PROCESSING", "SHIPPED", "COMPLETED"].includes(newStatus)) {
+        if (!order.payment || order.payment.status !== "VERIFIED") {
+          throw new Error("PAYMENT_NOT_VERIFIED");
+        }
       }
 
       // PENDING -> PAID (kurangi stock)
@@ -195,22 +202,44 @@ export const updateOrderStatus = async (req, res) => {
         }
       }
 
-      return await tx.order.update({
+      const updatedOrder = await tx.order.update({
         where: { id },
         data: {
           status: newStatus,
+          statusHistories: {
+            create: {
+              fromStatus: currentStatus,
+              toStatus: newStatus,
+              changedBy: req.user.role,
+              note: note || null,
+            },
+          },
+        },
+        include: {
+          statusHistories: true,
         },
       });
+
+      return updatedOrder;
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Order status updated.",
       data: result,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      message: "Failed to update order status.",
+
+    const errorMap = {
+      ORDER_NOT_FOUND: "Order not found.",
+      ORDER_FINALIZED: "Order already finalized.",
+      INVALID_TRANSITION: "Invalid status transition.",
+      PAYMENT_NOT_VERIFIED: "Payment must be verified first.",
+      INSUFFICIENT_STOCK: "Insufficient stock.",
+    };
+
+    return res.status(400).json({
+      message: errorMap[error.message] || "Failed to update order status.",
     });
   }
 };
@@ -273,6 +302,31 @@ export const getOrderDetail = async (req, res) => {
     console.error(error);
     res.status(500).json({
       message: "Failed to fetch order detail.",
+    });
+  }
+};
+
+export const getOrderTimeline = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const histories = await prisma.orderStatusHistory.findMany({
+      where: {
+        orderId: id,
+      },
+      orderBy: {
+        createdBy: "asc",
+      },
+    });
+
+    return res.status(200).json({
+      message: "Order status timeline.",
+      data: histories,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Failed to fetch order timeline.",
     });
   }
 };

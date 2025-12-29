@@ -52,6 +52,7 @@ model Order {
   user       User        @relation(fields: [userId], references: [id])
   items      OrderItem[]
   payment    Payment[]
+  statusHistories   OrderStatusHistory[]
 }
 
 model OrderItem {
@@ -79,6 +80,18 @@ model Payment {
   updateAt  DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model OrderStatusHistory {
+  id            String   @id @default(uuid())
+  orderId       String
+  fromStatus    OrderStatus?
+  toStatus      OrderStatus
+  note          String?
+  changedBy     Role
+  createdBy     DateTime   @default(now())
+
+  order         Order   @relation(fields: [orderId], references: [id])
 }
 
 enum Role {
