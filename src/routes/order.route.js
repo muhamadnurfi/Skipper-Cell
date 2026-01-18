@@ -4,6 +4,7 @@ import {
   AuthorizeRole,
 } from "../middleware/auth.middleware.js";
 import {
+  cancelPaidOrder,
   createOrder,
   getOrderDetail,
   getOrderTimeline,
@@ -37,5 +38,6 @@ orderRouter.post("/", AuthenticateToken, createOrder);
 orderRouter.get("/me", AuthenticateToken, getMyOrders);
 orderRouter.get("/:id", AuthenticateToken, getOrderDetail);
 orderRouter.get("/:id/timeline", AuthenticateToken, getOrderTimeline);
+orderRouter.patch("/:id/cancel", AuthenticateToken, cancelPaidOrder);
 
 export default orderRouter;

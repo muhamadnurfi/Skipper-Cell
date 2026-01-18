@@ -1,4 +1,3 @@
-import * as z from "zod";
 import prisma from "../lib/prisma.js";
 
 const allowedTransitions = {
@@ -327,6 +326,108 @@ export const getOrderTimeline = async (req, res) => {
     console.error(error);
     res.status(500).json({
       message: "Failed to fetch order timeline.",
+    });
+  }
+};
+
+export const cancelPaidOrder = async (req, res) => {
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+        include: {
+          items: true,
+          payment: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+      });
+
+      if (!order) {
+        throw new Error("ORDER_NOT_FOUND");
+      }
+
+      if (order.status === "CANCELLED") {
+        throw new Error("ORDER_ALREADY_CANCELLED");
+      }
+
+      if (!["PAID", "PROCESSING"].includes(order.status)) {
+        throw new Error("ORDER_NOT_CANCELLABLE");
+      }
+
+      const payments = order.payment[0];
+
+      if (!payments) {
+        throw new Error("PAYMENT_NOT_FOUND");
+      }
+
+      if (payments.status !== "VERIFIED") {
+        throw new Error("PAYMENT_NOT_VERIFIED");
+      }
+
+      // restock product
+      for (const item of order.items) {
+        await tx.product.update({
+          where: {
+            id: item.productId,
+          },
+          data: {
+            stock: {
+              increment: item.quantity,
+            },
+          },
+        });
+      }
+
+      // Refund payment
+      await tx.payment.update({
+        where: {
+          orderId: order.id, // diambil berdasarkan unique (1 order hanya boleh 1 payment)
+        },
+        data: {
+          status: "REFUNDED",
+          reason: reason || "Order cancelled",
+        },
+      });
+
+      // Cancel order + timeline
+      return await tx.order.update({
+        where: { id },
+        data: {
+          status: "CANCELLED",
+          statusHistories: {
+            create: {
+              fromStatus: order.status,
+              toStatus: "CANCELLED",
+              changedBy: req.user.role,
+              note: reason || "Order cancelled & refunded",
+            },
+          },
+        },
+      });
+    });
+
+    res.status(200).json({
+      message: "Order cancelled and refunded successfully.",
+      data: result,
+    });
+  } catch (error) {
+    console.error(error.message);
+
+    const errorMap = {
+      ORDER_NOT_FOUND: "Order not found.",
+      ORDER_ALREADY_CANCELLED: "Order already cancelled.",
+      ORDER_NOT_CANCELLABLE: "Order cannot be cancelled at this stage.",
+      PAYMENT_NOT_FOUND: "Payment not found.",
+      PAYMENT_NOT_VERIFIED: "Payment not verified.",
+    };
+
+    res.status(400).json({
+      message: errorMap[error.message] || "Failed to cancel order.",
     });
   }
 };
