@@ -4,6 +4,7 @@ import {
   addToCartSchema,
   updateCartItemSchema,
 } from "../utils/validationSchema.js";
+import { error } from "console";
 
 export const getCart = async (req, res) => {
   try {
@@ -381,6 +382,105 @@ export const clearCart = async (req, res) => {
     console.error(error);
     return res.status(500).json({
       message: "Failed to clear cart.",
+    });
+  }
+};
+
+// ambil cart user
+// validasi stock
+// create order
+// create payment
+// clear cart (items saja)
+
+export const checkoutFromCart = async (req, res) => {
+  const userId = req.user.id;
+  const { note } = req.body;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const cart = await tx.cart.findUnique({
+        where: { userId },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      });
+
+      if (!cart || cart.items.length === 0) {
+        throw new Error("Cart is empty.");
+      }
+
+      let totalPrice = 0;
+
+      // validasi stock
+      for (const item of cart.items) {
+        if (item.product.stock < item.quantity) {
+          throw new Error(
+            `Insufficient available for stock ${item.product.name}`,
+          );
+        }
+
+        totalPrice += item.product.price * item.quantity;
+      }
+
+      // Create Order
+      const order = await tx.order.create({
+        data: {
+          userId,
+          totalPrice,
+          status: "PENDING",
+          items: {
+            create: cart.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.product.price,
+            })),
+          },
+          statusHistories: {
+            create: {
+              toStatus: "PENDING",
+              changedBy: "USER",
+              note: note || "Checkout from cart.",
+            },
+          },
+        },
+      });
+
+      // Create payment
+      const payment = await tx.payment.create({
+        data: {
+          userId,
+          orderId: order.id,
+          amount: totalPrice,
+          status: "PENDING",
+        },
+      });
+
+      // Clear cart items
+      await tx.cartItem.deleteMany({
+        where: {
+          cartId: cart.id,
+        },
+      });
+
+      return { order, payment };
+    });
+
+    return res.status(201).json({
+      message: "Checkout successfully.",
+      data: {
+        orderId: result.order.id,
+        paymentId: result.payment.id,
+        totalPrice: result.order.totalPrice,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: error.message || "Checkout failed.",
     });
   }
 };

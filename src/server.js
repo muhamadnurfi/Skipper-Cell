@@ -9,6 +9,7 @@ import categoryRouter from "./routes/category.route.js";
 import orderRouter from "./routes/order.route.js";
 import paymentRouter from "./routes/payment.route.js";
 import cartRouter from "./routes/cart.route.js";
+import wishlistRouter from "./routes/wishlist.route.js";
 
 dotenv.config(); // Load environment variables
 
@@ -29,6 +30,7 @@ app.use("/api/categories", categoryRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/payments", paymentRouter);
 app.use("/api/cart", cartRouter);
+app.use("/api/wishlist", wishlistRouter);
 
 // --- Error Handling Middleware ---
 app.use((err, req, res, next) => {

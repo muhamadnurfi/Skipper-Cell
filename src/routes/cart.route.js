@@ -6,12 +6,14 @@ import {
   updateCartItem,
   removeFromCart,
   clearCart,
+  checkoutFromCart,
 } from "../controllers/cart.controller.js";
 
 const cartRouter = express.Router();
 
 cartRouter.get("/", AuthenticateToken, getCart);
 cartRouter.post("/", AuthenticateToken, addToCart);
+cartRouter.post("/checkout", AuthenticateToken, checkoutFromCart);
 cartRouter.put("/items/:itemId", AuthenticateToken, updateCartItem);
 cartRouter.delete("/items/:itemId", AuthenticateToken, removeFromCart);
 cartRouter.delete("/", AuthenticateToken, clearCart);

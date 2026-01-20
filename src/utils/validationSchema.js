@@ -80,3 +80,8 @@ export const addToCartSchema = z.object({
 export const updateCartItemSchema = z.object({
   quantity: z.coerce.number().int().min(1, "Quantity must be at least 1."),
 });
+
+//WISHLIST
+export const addToWishlistSchema = z.object({
+  productId: z.uuid("Product ID must be a valid UUID string."),
+});
